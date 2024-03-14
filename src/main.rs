@@ -30,17 +30,55 @@ fn add_function(name: &str, path: &str) {
     });
 }
 
-fn execute_command(name: &str) {
-    let commands = COMMANDS.lock().unwrap();
-    if let Some(command) = commands.get(name) {
-        let output = Command::new(&command.path)
-            .output()
-            .expect("Failed to execute command");
+// fn execute_command(name: &str) {
+//     let commands = COMMANDS.lock().unwrap();
+//     if let Some(command) = commands.get(name) {
+//         let output = Command::new(&command.path)
+//             .output()
+//             .expect("Failed to execute command");
 
-        let output = String::from_utf8_lossy(&output.stdout);
-        println!("{}", output);
-    } else {
-        println!("Command not found");
+//         let output = String::from_utf8_lossy(&output.stdout);
+//         println!("{}", output);
+//     } else {
+//         println!("Command not found");
+//     }
+// }
+
+// fn execute_command(command: &str) -> Option<()> {
+//     match command {
+//         "custom_command1" => {
+//             // Execute the code for custom_command1
+//             println!("Executing custom_command1");
+//             Some(())
+//         },
+//         "custom_command2" => {
+//             // Execute the code for custom_command2
+//             println!("Executing custom_command2");
+//             Some(())
+//         },
+//         _ => None, // Return None if the command is not recognized
+//     }
+// }
+
+fn execute_command(command: &str) -> Option<()> {
+    let commands = COMMANDS.lock().unwrap();
+    match commands.get(command) {
+        Some(custom_command) => {
+            let output = std::process::Command::new(&custom_command.path)
+                .output()
+                .expect("Failed to execute command");
+
+            if !output.stdout.is_empty() {
+                println!("{}", String::from_utf8_lossy(&output.stdout));
+            }
+
+            if !output.stderr.is_empty() {
+                eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+            }
+
+            Some(())
+        },
+        None => None, // Return None if the command is not recognized
     }
 }
 
@@ -89,9 +127,17 @@ fn loop_to_get_input() {
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         let input = input.trim();
+        //input done
+
         let now: DateTime<Local> = Local::now();
         let command_with_time = format!("{} - {}", now.to_string(), input);
         write_to_bashhistory(&command_with_time);
+        //writing to bash history done
+
+        global_string_vector.push(input.to_string());
+        //writing to current session history done
+
+
         let parts: Vec<&str> = input.split_whitespace().collect();
         match parts.as_slice() {
             ["exit"] => break,
@@ -106,6 +152,7 @@ fn loop_to_get_input() {
                 println!("{}", history);
             }
             ["history"] => {
+                println!("Printing history");
                 for command in global_string_vector.iter() {
                     println!("{}", command);
                 }
@@ -154,8 +201,29 @@ fn loop_to_get_input() {
 
             }
             [command] => {
-                execute_command(command);
-                global_string_vector.push(command.to_string());
+                match execute_command(command) {
+                    Some(_) => global_string_vector.push(command.to_string()),
+                    None => {
+                        let output = std::process::Command::new(command)
+                            .output();
+
+                        match output {
+                            Ok(output) => {
+                                if !output.stdout.is_empty() {
+                                    println!("{}", String::from_utf8_lossy(&output.stdout));
+                                }
+
+                                if !output.stderr.is_empty() {
+                                    eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+                                }
+                            },
+                            Err(e) => {
+                                eprintln!("Failed to execute command: {}", e);
+                                // Here you can add the code to run "cargo run" if needed
+                            }
+                        }
+                    }
+                }
             }
             _ => println!("Invalid command"),
         }
@@ -168,14 +236,14 @@ fn main() {
     let _global_string_vector = GLOBAL_VECTOR.lock().unwrap();
     let mut global_command_vector = GLOBAL_SAVED_COMMANDS.lock().unwrap();
     //input values into global command vector like ls cd mkdir and exit
-    global_command_vector.push("ls".to_string());
-    global_command_vector.push("cd".to_string());
-    global_command_vector.push("mkdir".to_string());
-    global_command_vector.push("exit".to_string());
+    // global_command_vector.push("ls".to_string());
+    // global_command_vector.push("cd".to_string());
+    // global_command_vector.push("mkdir".to_string());
+    // global_command_vector.push("exit".to_string());
 }
 
 
 // trying to make the code remember the custom functions
 //given by add_function
-// add history function to print the .bashhistory 
-// enable flags in history function such that history -c will clear the history
+// addition of functionalities of complex function like ls -al
+//not just "ls" or "cd" or "mkdir"
