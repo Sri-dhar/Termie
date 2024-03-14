@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::io::{self, Write, Read};
 use std::fs::OpenOptions;
 use chrono::{DateTime, Local};
 use std::collections::HashMap;
@@ -109,6 +109,29 @@ fn loop_to_get_input() {
                 for command in global_string_vector.iter() {
                     println!("{}", command);
                 }
+            }
+            ["history","-c"] => {
+                let sizeOfGlobalVector = global_string_vector.len();
+                for _ in 0..sizeOfGlobalVector {
+                    global_string_vector.pop();
+                }
+                //remove sizeOfGlobalVector lines from .bashhistory
+                let current_dir = env::current_dir().expect("Could not get current directory");
+                let current_bashhistory_path = current_dir.join(".bashhistory");
+                let mut file = std::fs::File::open(&current_bashhistory_path).expect("Could not open file");
+                let mut buffer = String::new();
+                file.read_to_string(&mut buffer).expect("Could not read file");
+                let mut lines: Vec<&str> = buffer.lines().collect();
+                for _ in 0..sizeOfGlobalVector {
+                    lines.pop();
+                }
+                let output = lines.join("\n");
+                let mut file = std::fs::OpenOptions::new()
+                    .write(true)
+                    .truncate(true)
+                    .open(current_bashhistory_path)
+                    .expect("Could not open file");
+                file.write_all(output.as_bytes()).expect("Could not write to file");
             }
             ["history","-ac"] => {
                 //empty the .bashhistory file
