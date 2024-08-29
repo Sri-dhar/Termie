@@ -1,11 +1,12 @@
 [package]
-name = "Termie"
+name = "gui-terminal"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-lazy_static = "1.4.0"
-chrono = "0.4.19"
-dirs = "5.0.1"
+egui = "0.27.2"
+egui_extras= "0.27.2"
+eframe = "0.27.2"
+ask_gemini = "0.1.2"
+tokio = "1.38.0"
+chrono = "0.4.38"   
