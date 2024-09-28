@@ -7,7 +7,8 @@ use std::fs;
 use std::io::{self, Error};
 use std::path::PathBuf;
 use std::process::Command;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{mpsc};
+// use std::sync::{Arc, Mutex}
 
 pub struct CommandInstace {
     counter: i32,
@@ -82,7 +83,8 @@ fn execute_command(command: &str, cwd: &mut PathBuf) -> io::Result<String> {
             }
             Err(e) => Err(e),
         }
-    } else {
+    } 
+    else {
         let output = Command::new("sh")
             .arg("-c")
             .arg(command)
@@ -188,14 +190,14 @@ impl MyApp {
     fn handle_send_command(&mut self) {
         println!("Command: {}", self.command_input);
 
-        let cmd_instance = CommandInstace {
-            counter: self.commands.len() as i32,
-            command: self.command_input.clone(),
-            output: "output".to_string(),
-            time: get_current_time().to_string(),
-        };
+        // let cmd_instance = CommandInstace {
+        //     counter: self.commands.len() as i32,
+        //     command: self.command_input.clone(),
+        //     output: "output".to_string(),
+        //     time: get_current_time().to_string(),
+        // };
 
-        self.commands.push(cmd_instance);
+        // self.commands.push(cmd_instance);
         // export_to_bash_history(self.command_input.clone().to_string());
 
         if self.command_input.is_empty() {
@@ -220,6 +222,7 @@ impl MyApp {
             time: get_current_time().to_string(),
             // status: "status".to_string(),
         });
+        // println!("string added to commands: {}", self.command_input);
 
         self.command_input.clear();
         self.send_button_pressed = false;
