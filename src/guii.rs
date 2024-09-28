@@ -5,11 +5,11 @@ use eframe::egui;
 use egui::{Key, ScrollArea, TopBottomPanel};
 use std::env;
 use std::fs;
+use std::io::Write;
 use std::io::{self, Error};
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::mpsc;
-use std::io::Write;
 
 // use std::sync::{Arc, Mutex}
 
@@ -32,7 +32,6 @@ pub struct MyApp {
     gemini_input: String,
     file_bash_history: std::fs::File,
 }
-
 
 impl Default for MyApp {
     fn default() -> Self {
@@ -96,8 +95,7 @@ fn execute_command(command: &str, cwd: &mut PathBuf) -> io::Result<String> {
             }
             Err(e) => Err(e),
         }
-    } 
-    else {
+    } else {
         let output = Command::new("sh")
             .arg("-c")
             .arg(command)
@@ -128,17 +126,6 @@ fn execute_command(command: &str, cwd: &mut PathBuf) -> io::Result<String> {
 //     Ok()
 // }
 
-fn process(input: Vec<String>) -> String {
-    let mut output = String::new();
-    for i in input {
-        output.push_str(i.as_str());
-    }
-    output
-}
-
-//set api key first
-// export GEMINI_API_KEY=your_api_key
-// dont use whitespaces
 async fn call_gemini(prompt_content: String) -> Result<String, Error> {
     let api_key = match env::var("GEMINI_API_KEY") {
         Ok(key) => key,
@@ -160,6 +147,15 @@ async fn call_gemini(prompt_content: String) -> Result<String, Error> {
     .trim()
     .to_string();
     let prompt = format!("{}{}", prompt_prefix, prompt_content);
+
+    // Anonymous function to process the input
+    let process = |input: Vec<String>| -> String {
+        let mut output = String::new();
+        for i in input {
+            output.push_str(i.as_str());
+        }
+        output
+    };
 
     match gemini.ask(prompt.as_str()).await {
         Ok(response) => Ok(process(response)),
@@ -240,7 +236,6 @@ impl MyApp {
         self.command_input.clear();
         self.send_button_pressed = false;
     }
-
 }
 
 impl eframe::App for MyApp {
