@@ -1,5 +1,6 @@
 use ask_gemini::Gemini;
 use core::f32;
+// use std::fs::File;
 use eframe::egui;
 use egui::{Key, ScrollArea, TopBottomPanel};
 use std::env;
@@ -7,7 +8,9 @@ use std::fs;
 use std::io::{self, Error};
 use std::path::PathBuf;
 use std::process::Command;
-use std::sync::{mpsc};
+use std::sync::mpsc;
+use std::io::Write;
+
 // use std::sync::{Arc, Mutex}
 
 pub struct CommandInstace {
@@ -27,7 +30,9 @@ pub struct MyApp {
     request_focus_next_frame: bool,
     gemini_response: String,
     gemini_input: String,
+    file_bash_history: std::fs::File,
 }
+
 
 impl Default for MyApp {
     fn default() -> Self {
@@ -41,17 +46,25 @@ impl Default for MyApp {
             request_focus_next_frame: false,
             gemini_response: String::new(),
             gemini_input: String::new(),
+            file_bash_history: fs::OpenOptions::new()
+                .append(true)
+                .open("/home/solomons/Termie/history/.bash_history")
+                .expect("Failed to open bash history file"),
         }
+    }
+}
+
+fn write_to_bash_history(file_to_export_to: &mut std::fs::File, command: String) {
+    let time_string = get_current_time();
+    let command = format!("#{} {}\n", time_string, command);
+    if let Err(e) = file_to_export_to.write_all(command.as_bytes()) {
+        eprintln!("Failed to write to bash history file: {}", e);
     }
 }
 
 fn get_current_time() -> String {
     let now = chrono::Local::now();
     now.format("%Y-%m-%d %H:%M:%S").to_string()
-}
-
-fn export_to_bash_history(){
-
 }
 
 fn execute_command(command: &str, cwd: &mut PathBuf) -> io::Result<String> {
@@ -189,7 +202,7 @@ impl MyApp {
 
     fn handle_send_command(&mut self) {
         println!("Command: {}", self.command_input);
-
+        write_to_bash_history(&mut self.file_bash_history, self.command_input.clone());
         // let cmd_instance = CommandInstace {
         //     counter: self.commands.len() as i32,
         //     command: self.command_input.clone(),
@@ -227,6 +240,7 @@ impl MyApp {
         self.command_input.clear();
         self.send_button_pressed = false;
     }
+
 }
 
 impl eframe::App for MyApp {
@@ -263,10 +277,7 @@ impl eframe::App for MyApp {
                                             ui.add_space(3.0);
                                         });
                                     });
-                                    // ui.horizontal(|ui| {
                                     ui.label(format!("{}", command.output));
-                                    // ui.label(format!("{}", command.status));
-                                    // });
                                 });
                             }
                             ui.add_space(40.0);
