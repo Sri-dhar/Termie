@@ -31,6 +31,8 @@ pub struct MyApp {
     gemini_response: String,
     gemini_input: String,
     file_bash_history: std::fs::File,
+    file_history_arrows: std::fs::File,
+    arrow_index: i32,
 }
 
 impl Default for MyApp {
@@ -49,6 +51,12 @@ impl Default for MyApp {
                 .append(true)
                 .open("/home/solomons/Termie/history/.bash_history")
                 .expect("Failed to open bash history file"),
+            file_history_arrows: fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open("/home/solomons/Termie/history/.lastXcmds")
+                .expect("Failed to open history file"),
+            arrow_index: 0,
         }
     }
 }
@@ -113,7 +121,11 @@ fn execute_command(command: &str, cwd: &mut PathBuf) -> io::Result<String> {
     }
 }
 
-#[cfg(feature = "fetch_api_key_from_system")]
+fn get_string_from_file(file: &mut std::fs::File, index: i32) -> String {
+
+}
+
+#[cfg(not(feature = "donot_fetch_api_key_from_system"))]
 fn fetch_api_key() -> Result<String, Error> {
     match env::var("GEMINI_API_KEY") {
         Ok(key) => Ok(key),
@@ -127,7 +139,7 @@ fn fetch_api_key() -> Result<String, Error> {
     }
 }
 
-#[cfg(not(feature = "fetch_api_key_from_system"))]
+#[cfg(feature = "donot_fetch_api_key_from_system")]
 fn fetch_api_key() -> Result<String, Error> {
     Ok(String::from(""))
 }
@@ -325,6 +337,16 @@ impl eframe::App for MyApp {
                         self.send_button_pressed = true;
                         // Set a flag to request focus in the next frame
                         self.request_focus_next_frame = true;
+                    }
+
+                    if ctx.input(|i| i.key_pressed(Key::ArrowUp)) {
+                        let mut buffer = String::new();
+                        buffer = get_string_from_file(&mut self.file_history_arrows, self.arrow_index);
+                        
+                    }
+
+                    if ctx.input(|i| i.key_pressed(Key::ArrowDown)) {
+                        let mut buffer = String::new();
                     }
                 });
             });
