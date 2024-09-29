@@ -1,6 +1,5 @@
 use ask_gemini::Gemini;
 use core::f32;
-// use std::fs::File;
 use eframe::egui;
 use egui::{Key, ScrollArea, TopBottomPanel};
 use std::env;
@@ -11,6 +10,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::mpsc;
 
+// use std::fs::File;
 // use std::sync::{Arc, Mutex}
 
 pub struct CommandInstance {
@@ -105,9 +105,6 @@ fn execute_command(command: &str, cwd: &mut PathBuf) -> io::Result<String> {
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        // println!("stdout: {}", stdout);
-        // println!("stderr: {}", stderr);
-
         if !stderr.is_empty() {
             Err(io::Error::new(io::ErrorKind::Other, stderr))
         } else {
@@ -115,16 +112,6 @@ fn execute_command(command: &str, cwd: &mut PathBuf) -> io::Result<String> {
         }
     }
 }
-
-// #[tokio::main]
-// async fn callGemini(input: String) -> Result<(), Error> {
-//     //need to export your api key as
-//     //export GEMINI_API_KEY = your_api_key
-//     let gemini = Gemini::new(None, None);
-//     let prompt_prefix = fs::read_to_string("./../prompt_context/context1.txt")?.trim().to_string();
-
-//     Ok()
-// }
 
 #[cfg(feature = "fetch_api_key_from_system")]
 fn fetch_api_key() -> Result<String, Error> {
@@ -142,7 +129,7 @@ fn fetch_api_key() -> Result<String, Error> {
 
 #[cfg(not(feature = "fetch_api_key_from_system"))]
 fn fetch_api_key() -> Result<String, Error> {
-    Ok(String::from("")) 
+    Ok(String::from(""))
 }
 
 async fn call_gemini(prompt_content: String) -> Result<String, Error> {
@@ -176,15 +163,6 @@ async fn call_gemini(prompt_content: String) -> Result<String, Error> {
 }
 
 impl MyApp {
-    fn print_commands_vector(commands: &Vec<CommandInstance>) {
-        for command in commands {
-            println!(
-                "Command: {}, Output: {}, Time: {}",
-                command.command, command.output, command.time
-            );
-        }
-    }
-
     fn custom_command_handling(&mut self, command: String) -> bool {
         let args: Vec<&str> = command.split_whitespace().collect();
         let (cmd, _rest) = args.split_at(1);
@@ -205,18 +183,19 @@ impl MyApp {
         false
     }
 
-    fn handle_send_command(&mut self) {
-        println!("Command: {}", self.command_input);
-        write_to_bash_history(&mut self.file_bash_history, self.command_input.clone());
-        // let cmd_instance = CommandInstance {
-        //     counter: self.commands.len() as i32,
-        //     command: self.command_input.clone(),
-        //     output: "output".to_string(),
-        //     time: get_current_time().to_string(),
-        // };
+    fn print_command_with_time(&self, command: &str) {
+        let def_tim = String::from(get_current_time());
+        let time = self
+            .commands
+            .last()
+            .map(|cmd| &cmd.time)
+            .unwrap_or(&def_tim);
+        println!("=> {} {}", time, command);
+    }
 
-        // self.commands.push(cmd_instance);
-        // export_to_bash_history(self.command_input.clone().to_string());
+    fn handle_send_command(&mut self) {
+        self.print_command_with_time(&self.command_input);
+        write_to_bash_history(&mut self.file_bash_history, self.command_input.clone());
 
         if self.command_input.is_empty() {
             self.send_button_pressed = false;
