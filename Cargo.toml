@@ -10,3 +10,6 @@ eframe = "0.27.2"
 ask_gemini = "0.1.2"
 tokio = "1.38.0"
 chrono = "0.4.38"   
+
+[features]
+fetch_api_key_from_system = []

@@ -13,7 +13,7 @@ use std::sync::mpsc;
 
 // use std::sync::{Arc, Mutex}
 
-pub struct CommandInstace {
+pub struct CommandInstance {
     counter: i32,
     command: String,
     output: String,
@@ -25,7 +25,7 @@ pub struct MyApp {
     command_input: String,
     last_ran_cmd: String,
     send_button_pressed: bool,
-    commands: Vec<CommandInstace>,
+    commands: Vec<CommandInstance>,
     text_area_id: Option<egui::Id>,
     request_focus_next_frame: bool,
     gemini_response: String,
@@ -126,21 +126,30 @@ fn execute_command(command: &str, cwd: &mut PathBuf) -> io::Result<String> {
 //     Ok()
 // }
 
-async fn call_gemini(prompt_content: String) -> Result<String, Error> {
-    let api_key = match env::var("GEMINI_API_KEY") {
-        Ok(key) => key,
+#[cfg(feature = "fetch_api_key_from_system")]
+fn fetch_api_key() -> Result<String, Error> {
+    match env::var("GEMINI_API_KEY") {
+        Ok(key) => Ok(key),
         Err(e) => {
             eprintln!("Error: GEMINI_API_KEY not set - {}", e);
-            return Err(io::Error::new(
+            Err(io::Error::new(
                 io::ErrorKind::NotFound,
                 "GEMINI_API_KEY not set",
-            ));
+            ))
         }
-    };
+    }
+}
 
-    // println!("API Key: {}", api_key);
+#[cfg(not(feature = "fetch_api_key_from_system"))]
+fn fetch_api_key() -> Result<String, Error> {
+    Ok(String::from("")) 
+}
 
-    let gemini = Gemini::new(None, None);
+async fn call_gemini(prompt_content: String) -> Result<String, Error> {
+    let api_key = fetch_api_key()?;
+    let api_key_ref: Option<&str> = Some(api_key.as_str());
+
+    let gemini = Gemini::new(api_key_ref, None);
     let prompt_prefix = fs::read_to_string(
         "/home/solomons/Rust_AttemptG/folder_geminiInRust/gui-terminal/prompt_context/context1.txt",
     )?
@@ -167,7 +176,7 @@ async fn call_gemini(prompt_content: String) -> Result<String, Error> {
 }
 
 impl MyApp {
-    fn print_commands_vector(commands: &Vec<CommandInstace>) {
+    fn print_commands_vector(commands: &Vec<CommandInstance>) {
         for command in commands {
             println!(
                 "Command: {}, Output: {}, Time: {}",
@@ -199,7 +208,7 @@ impl MyApp {
     fn handle_send_command(&mut self) {
         println!("Command: {}", self.command_input);
         write_to_bash_history(&mut self.file_bash_history, self.command_input.clone());
-        // let cmd_instance = CommandInstace {
+        // let cmd_instance = CommandInstance {
         //     counter: self.commands.len() as i32,
         //     command: self.command_input.clone(),
         //     output: "output".to_string(),
@@ -224,14 +233,12 @@ impl MyApp {
             Ok(output) => output,
             Err(e) => e.to_string(),
         };
-        self.commands.push(CommandInstace {
+        self.commands.push(CommandInstance {
             counter: self.commands.len() as i32,
             command: self.command_input.clone(),
             output: output,
             time: get_current_time().to_string(),
-            // status: "status".to_string(),
         });
-        // println!("string added to commands: {}", self.command_input);
 
         self.command_input.clear();
         self.send_button_pressed = false;
