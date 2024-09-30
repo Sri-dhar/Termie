@@ -6,7 +6,7 @@ use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::{BufReader, BufRead};
-use std::io::{self, Error, Seek, Write};
+use std::io::{self, Error, Write};
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::mpsc;
