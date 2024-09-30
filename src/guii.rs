@@ -4,8 +4,9 @@ use eframe::egui;
 use egui::{Key, ScrollArea, TopBottomPanel};
 use std::env;
 use std::fs;
-use std::io::Write;
-use std::io::{self, Error};
+use std::fs::File;
+use std::io::{BufReader, BufRead};
+use std::io::{self, Error, Seek, Write};
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::mpsc;
@@ -56,7 +57,7 @@ impl Default for MyApp {
                 .write(true)
                 .open("/home/solomons/Termie/history/.lastXcmds")
                 .expect("Failed to open history file"),
-            arrow_index: 0,
+            arrow_index: 501,
         }
     }
 }
@@ -121,8 +122,21 @@ fn execute_command(command: &str, cwd: &mut PathBuf) -> io::Result<String> {
     }
 }
 
-fn get_string_from_file(file: &mut std::fs::File, index: i32) -> String {
+fn get_string_from_file(file: &mut File, index: i32) -> String {
+    println!("--- Get String from file called with index: {}", index); 
+    let reader = BufReader::new(file);
+    let mut lines = reader.lines();
 
+    for _ in 0..index-1 {
+        lines.next();   
+    }
+
+    // println!("{}",lines.next().unwrap().unwrap_or_default());
+
+    match lines.next() {
+        Some(line) => line.unwrap_or_default(),
+        None => String::new(),
+    }
 }
 
 #[cfg(not(feature = "donot_fetch_api_key_from_system"))]
@@ -154,7 +168,7 @@ async fn call_gemini(prompt_content: String) -> Result<String, Error> {
     )?
     .trim()
     .to_string();
-    let prompt = format!("{}{}", prompt_prefix, prompt_content);
+    let prompt = format!("{} {}", prompt_prefix, prompt_content);
 
     // Anonymous function to process the input
     let process = |input: Vec<String>| -> String {
@@ -335,18 +349,26 @@ impl eframe::App for MyApp {
                     if ctx.input(|i| i.key_pressed(Key::Enter)) {
                         self.last_ran_cmd = self.command_input.clone();
                         self.send_button_pressed = true;
-                        // Set a flag to request focus in the next frame
-                        self.request_focus_next_frame = true;
+                        self.request_focus_next_frame = true; // Set a flag to request focus in the next frame
                     }
 
                     if ctx.input(|i| i.key_pressed(Key::ArrowUp)) {
-                        let mut buffer = String::new();
-                        buffer = get_string_from_file(&mut self.file_history_arrows, self.arrow_index);
-                        
+                        self.arrow_index -= 1;
+                        let buffer =
+                            get_string_from_file(&mut self.file_history_arrows, self.arrow_index);
+
+                        println!("Up arrow pressed");
+                        self.command_input = buffer;
                     }
 
                     if ctx.input(|i| i.key_pressed(Key::ArrowDown)) {
-                        let mut buffer = String::new();
+                        self.arrow_index += 1;
+                        let buffer =
+                            get_string_from_file(&mut self.file_history_arrows, self.arrow_index);
+
+                        println!("Down arrow pressed");
+                        self.command_input = buffer;
+
                     }
                 });
             });
@@ -354,6 +376,7 @@ impl eframe::App for MyApp {
             if self.request_focus_next_frame {
                 if let Some(id) = self.text_area_id {
                     ctx.memory_mut(|memory| memory.request_focus(id));
+                    println!("Down arrow pressed");
                 }
                 self.request_focus_next_frame = false;
             }
