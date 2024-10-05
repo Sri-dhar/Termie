@@ -5,14 +5,11 @@ use egui::{Key, ScrollArea, TopBottomPanel};
 use std::env;
 use std::fs;
 use std::fs::File;
-use std::io::{self, Error, Seek, Write};
+use std::io::{self, Error, Read, Seek, SeekFrom, Write};
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::mpsc;
-
-// use std::fs::File;
-// use std::sync::{Arc, Mutex}
 
 pub struct CommandInstance {
     counter: i32,
@@ -141,6 +138,44 @@ fn get_string_from_file(file: &mut File, param_index: i32) -> String {
     let line = &lines[param_index as usize - 1];
     println!("--- Get String from file returning: {}", line);
     line.clone()
+}
+
+fn append_string_to_file(file: &mut File, string: String) -> io::Result<()> {
+    println!("--- Append String to file called with: {}", string);
+
+    // Read the entire file content
+    file.seek(SeekFrom::Start(0))?;
+    let mut content = String::new();
+    file.read_to_string(&mut content)?;
+
+    // Split the content into lines
+    let mut lines: Vec<&str> = content.lines().collect();
+
+    // If we have 500 or more lines, remove the first line
+    if lines.len() >= 500 {
+        lines.remove(0);
+    }
+
+    // Add the new string as the last line
+    lines.push(&string);
+
+    // Ensure we only keep the last 500 lines
+    if lines.len() > 500 {
+        lines = lines[lines.len() - 500..].to_vec();
+    }
+
+    // Clear the file and write the updated content
+    file.set_len(0)?;
+    file.seek(SeekFrom::Start(0))?;
+    for line in lines {
+        writeln!(file, "{}", line)?;
+    }
+
+    // Flush the file to ensure the data is written
+    file.flush()?;
+
+    println!("File updated successfully");
+    Ok(())
 }
 
 #[cfg(not(feature = "donot_fetch_api_key_from_system"))]
@@ -312,6 +347,11 @@ impl eframe::App for MyApp {
                     let ai_button = ui.button("Ask Gemini").on_hover_text("Ask Gemini");
 
                     if send_button.clicked() || self.send_button_pressed {
+                        self.arrow_index = 501;
+                        let _response = append_string_to_file(
+                            &mut self.file_history_arrows,
+                            self.command_input.clone(),
+                        );
                         self.handle_send_command();
                     }
 
@@ -356,8 +396,10 @@ impl eframe::App for MyApp {
                         self.request_focus_next_frame = true; // Set a flag to request focus in the next frame
                     }
 
-                    if ctx.input(|i| i.key_pressed(Key::ArrowUp)) {
-                        self.arrow_index -= 1;
+                    if self.arrow_index != 0 && ctx.input(|i| i.key_pressed(Key::ArrowUp)) {
+                        if self.arrow_index > 0 {
+                            self.arrow_index -= 1;
+                        }
                         let buffer =
                             get_string_from_file(&mut self.file_history_arrows, self.arrow_index);
 
@@ -365,8 +407,10 @@ impl eframe::App for MyApp {
                         self.command_input = buffer;
                     }
 
-                    if ctx.input(|i| i.key_pressed(Key::ArrowDown)) {
-                        self.arrow_index += 1;
+                    if self.arrow_index != 501 && ctx.input(|i| i.key_pressed(Key::ArrowDown)) {
+                        if self.arrow_index < 501 {
+                            self.arrow_index += 1;
+                        }
                         let buffer =
                             get_string_from_file(&mut self.file_history_arrows, self.arrow_index);
 
