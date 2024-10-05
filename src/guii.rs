@@ -5,8 +5,8 @@ use egui::{Key, ScrollArea, TopBottomPanel};
 use std::env;
 use std::fs;
 use std::fs::File;
-use std::io::{BufReader, BufRead};
-use std::io::{self, Error, Write};
+use std::io::{self, Error, Seek, Write};
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::mpsc;
@@ -122,21 +122,25 @@ fn execute_command(command: &str, cwd: &mut PathBuf) -> io::Result<String> {
     }
 }
 
-fn get_string_from_file(file: &mut File, index: i32) -> String {
-    println!("--- Get String from file called with index: {}", index); 
+fn get_string_from_file(file: &mut File, param_index: i32) -> String {
+    println!(
+        "--- Get String from file called with index: {}",
+        param_index
+    );
+
+    file.seek(std::io::SeekFrom::Start(0)).unwrap();
+
     let reader = BufReader::new(file);
-    let mut lines = reader.lines();
+    let lines: Vec<String> = reader.lines().map(|l| l.unwrap_or_default()).collect();
 
-    for _ in 0..index-1 {
-        lines.next();   
+    if param_index <= 0 || param_index as usize > lines.len() {
+        eprintln!("Invalid index: {}", param_index);
+        return String::new();
     }
 
-    // println!("{}",lines.next().unwrap().unwrap_or_default());
-
-    match lines.next() {
-        Some(line) => line.unwrap_or_default(),
-        None => String::new(),
-    }
+    let line = &lines[param_index as usize - 1];
+    println!("--- Get String from file returning: {}", line);
+    line.clone()
 }
 
 #[cfg(not(feature = "donot_fetch_api_key_from_system"))]
@@ -368,7 +372,6 @@ impl eframe::App for MyApp {
 
                         println!("Down arrow pressed");
                         self.command_input = buffer;
-
                     }
                 });
             });
