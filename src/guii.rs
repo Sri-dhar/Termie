@@ -124,7 +124,7 @@ fn get_string_from_file(file: &mut File, param_index: i32) -> String {
         "--- Get String from file called with index: {}",
         param_index
     );
-
+    
     file.seek(std::io::SeekFrom::Start(0)).unwrap();
 
     let reader = BufReader::new(file);
@@ -143,35 +143,28 @@ fn get_string_from_file(file: &mut File, param_index: i32) -> String {
 fn append_string_to_file(file: &mut File, string: String) -> io::Result<()> {
     println!("--- Append String to file called with: {}", string);
 
-    // Read the entire file content
     file.seek(SeekFrom::Start(0))?;
     let mut content = String::new();
     file.read_to_string(&mut content)?;
 
-    // Split the content into lines
     let mut lines: Vec<&str> = content.lines().collect();
 
-    // If we have 500 or more lines, remove the first line
     if lines.len() >= 500 {
         lines.remove(0);
     }
 
-    // Add the new string as the last line
     lines.push(&string);
 
-    // Ensure we only keep the last 500 lines
     if lines.len() > 500 {
         lines = lines[lines.len() - 500..].to_vec();
     }
 
-    // Clear the file and write the updated content
     file.set_len(0)?;
     file.seek(SeekFrom::Start(0))?;
     for line in lines {
         writeln!(file, "{}", line)?;
     }
 
-    // Flush the file to ensure the data is written
     file.flush()?;
 
     println!("File updated successfully");
