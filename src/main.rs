@@ -1,5 +1,9 @@
+mod command;
+mod file_operations;
+mod gemini_integration;
+mod ui;
+
 use eframe::egui;
-mod guii;
 
 #[tokio::main]
 async fn main() -> Result<(), eframe::Error> {
@@ -10,6 +14,6 @@ async fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Termie",
         options,
-        Box::new(|_cc| Box::<guii::MyApp>::default()),
+        Box::new(|_cc| Box::<ui::MyApp>::default()),
     )
 }
